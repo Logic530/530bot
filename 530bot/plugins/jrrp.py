@@ -2,7 +2,7 @@ from nonebot import on_command, CommandSession
 import datetime
 import random
 
-@on_command('jrrp')
+@on_command('jrrp', only_to_me=False)
 async def jrrp(session: CommandSession):
     user_id = session.ctx['user_id']
     nickname = session.ctx['sender']['nickname']
