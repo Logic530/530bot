@@ -60,15 +60,15 @@ async def talk_add(session: CommandSession):
         pattern = args[0]
         reply = args[1]
     except AssertionError:
-        await session.send('参数错误')
+        await session.send('参数错了呢~')
         return
 
     try:
         add_rule(pattern, reply)
     except sqlite3.IntegrityError:
-        await session.send('规则已存在')
+        await session.send('好像之前添加过了')
         return
-    await session.send('规则已添加' + ' ' + pattern + ' ' + reply)
+    await session.send('我知道了，' + '只要 ' + pattern + ' 就 ' + reply + ' 吗')
 
 
 # 子命令del，用于删除规则
@@ -81,14 +81,14 @@ async def talk_del(session: CommandSession):
         pattern = args[0]
         reply = args[1]
     except AssertionError:
-        session.send('参数错误')
+        session.send('参数错了呢~')
 
     try:
         del_rule(pattern, reply=reply)
     except Exception:
-        await session.send('要删除的记录不存在')
+        await session.send('你说的这个我没有听说过呢')
         return
-    await session.send('规则删除成功' + ' ' + pattern + ' ' + reply)
+    await session.send('好吧好吧，删除这一条' + ' ' + pattern + ' ' + reply)
 
 # 黑名单指令，用于添加黑名单
 @talk.command('blacklist', only_to_me=False, permission=permission.SUPERUSER)
@@ -100,11 +100,14 @@ async def blacklist(session: CommandSession):
         assert len(args) == 1
         id = int(args[0])
     except (AssertionError, ValueError):
-        await session.send('参数错误')
+        await session.send('参数错了呢~')
         return
-
-    add_blacklist(id)
-    await session.send('黑名单已添加' + ' ' + str(id))
+    try:
+        add_blacklist(id)
+    except sqlite3.IntegrityError:
+        session.send('是这个人吗？ ' + str(id) +' 我已经知道啦')
+        return
+    await session.send('原来 ' + str(id) + ' 是坏人吗，不听ta说话了')
 
 '''
 # 子命令search，用于搜索规则
@@ -114,7 +117,7 @@ async def talk_search(session: CommandSession):
     try:
         assert len(session.args['argv']) in (1, 2)
     except AssertionError:
-        session.send('参数错误')
+        session.send('参数错了呢~')
 '''
 
 # 自然语言处理，用于执行自动回复
