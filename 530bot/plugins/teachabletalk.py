@@ -107,7 +107,7 @@ async def blacklist(session: CommandSession):
     try:
         add_blacklist(id)
     except sqlite3.IntegrityError:
-        session.send('是这个人吗？ ' + str(id) +' 我已经知道啦')
+        session.send('是这个人吗？ ' + str(id) + ' 之前说过啦')
         return
     await session.send('原来 ' + str(id) + ' 是坏人吗，不听ta说话了')
 
