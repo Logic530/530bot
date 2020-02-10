@@ -1,5 +1,5 @@
 from nonebot import (CommandGroup, CommandSession, NLPSession, logger,
-                     on_command, on_natural_language)
+                     on_command, on_natural_language, permission)
 import sqlite3
 import re
 from random import choice
@@ -45,6 +45,11 @@ def search_rule(keyword: str):
     return cursor.fetchall()
 
 
+def add_blacklist(id: int):
+    add_blacklist_SQL = '''INSERT INTO blacklist (id) VALUES (?)'''
+    cursor.execute(add_blacklist_SQL, (id,))
+    database.commit()
+
 # 子命令add，用于添加规则
 @talk.command('add', only_to_me=False)
 async def talk_add(session: CommandSession):
@@ -85,6 +90,22 @@ async def talk_del(session: CommandSession):
         return
     await session.send('规则删除成功' + ' ' + pattern + ' ' + reply)
 
+# 黑名单指令，用于添加黑名单
+@talk.command('blacklist', only_to_me=False, permission=permission.SUPERUSER)
+async def blacklist(session: CommandSession):
+    logger.debug('执行添加黑名单指令')
+    args = session.args['argv']
+
+    try:
+        assert len(args) == 1
+        id = int(args[0])
+    except (AssertionError, ValueError):
+        await session.send('参数错误')
+        return
+
+    add_blacklist(id)
+    await session.send('黑名单已添加' + ' ' + str(id))
+
 '''
 # 子命令search，用于搜索规则
 @talk.command('search')
@@ -99,6 +120,13 @@ async def talk_search(session: CommandSession):
 # 自然语言处理，用于执行自动回复
 @on_natural_language(only_to_me=False)
 async def _(session: NLPSession):
+
+    # 检查用户是否在黑名单
+    get_blacklist_SQL = '''SELECT * from blacklist'''
+    cursor.execute(get_blacklist_SQL)
+    blacklist = cursor.fetchall()
+    if session.ctx['user_id'] in blacklist:
+        return
 
     cursor.execute('''SELECT * FROM rules''')
     rules = cursor.fetchall()
