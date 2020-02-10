@@ -3,6 +3,7 @@ from nonebot import (CommandGroup, CommandSession, NLPSession, logger,
 import sqlite3
 import re
 from random import choice
+from hashlib import md5
 
 # talk命令组
 talk = CommandGroup('talk', shell_like=True)
@@ -68,7 +69,8 @@ async def talk_add(session: CommandSession):
     except sqlite3.IntegrityError:
         await session.send('好像之前添加过了')
         return
-    await session.send('我知道了，' + '只要 ' + pattern + ' 就 ' + reply + ' 吗')
+    rule_md5 = md5((pattern + reply).encode())
+    await session.send('我知道啦' + ' 记忆条目已更新 ' + rule_md5.hexdigest())
 
 
 # 子命令del，用于删除规则
