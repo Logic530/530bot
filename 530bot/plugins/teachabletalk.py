@@ -126,11 +126,14 @@ async def _(session: NLPSession):
     cursor.execute(get_blacklist_SQL)
     blacklist = cursor.fetchall()
     if session.ctx['user_id'] in blacklist:
+        logger.debug('用户在黑名单中，忽略')
         return
 
     cursor.execute('''SELECT * FROM rules''')
     rules = cursor.fetchall()
     message = session.msg_text
+    if not message:
+        return
     reply_list = []
 
     for rule in rules:
@@ -142,3 +145,5 @@ async def _(session: NLPSession):
 
     if reply_list:
         await session.send(choice(reply_list))
+    else:
+        logger.debug('没有匹配的规则，忽略')
