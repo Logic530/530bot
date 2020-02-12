@@ -3,6 +3,7 @@ from nonebot import (CommandGroup, CommandSession, NLPSession, logger,
 import sqlite3
 import re
 from random import choice
+from hashlib import md5
 
 # talk命令组
 talk = CommandGroup('talk', shell_like=True)
@@ -60,15 +61,16 @@ async def talk_add(session: CommandSession):
         pattern = args[0]
         reply = args[1]
     except AssertionError:
-        await session.send('参数错误')
+        await session.send('参数错了呢~')
         return
 
     try:
         add_rule(pattern, reply)
     except sqlite3.IntegrityError:
-        await session.send('规则已存在')
+        await session.send('好像之前添加过了')
         return
-    await session.send('规则已添加' + ' ' + pattern + ' ' + reply)
+    rule_md5 = md5((pattern + reply).encode())
+    await session.send('我知道啦' + ' 记忆条目已更新 ' + rule_md5.hexdigest())
 
 
 # 子命令del，用于删除规则
@@ -81,14 +83,33 @@ async def talk_del(session: CommandSession):
         pattern = args[0]
         reply = args[1]
     except AssertionError:
-        session.send('参数错误')
+        session.send('参数错了呢~')
 
     try:
         del_rule(pattern, reply=reply)
     except Exception:
-        await session.send('要删除的记录不存在')
+        await session.send('你说的这个我没有听说过呢')
         return
-    await session.send('规则删除成功' + ' ' + pattern + ' ' + reply)
+    await session.send('好吧好吧，删除这一条' + ' ' + pattern + ' ' + reply)
+
+# 黑名单指令，用于添加黑名单
+@talk.command('blacklist', only_to_me=False, permission=permission.SUPERUSER)
+async def blacklist(session: CommandSession):
+    logger.debug('执行添加黑名单指令')
+    args = session.args['argv']
+
+    try:
+        assert len(args) == 1
+        id = int(args[0])
+    except (AssertionError, ValueError):
+        await session.send('参数错了呢~')
+        return
+    try:
+        add_blacklist(id)
+    except sqlite3.IntegrityError:
+        session.send('是这个人吗？ ' + str(id) + ' 之前说过啦')
+        return
+    await session.send('原来 ' + str(id) + ' 是坏人吗，不听ta说话了')
 
 # 黑名单指令，用于添加黑名单
 @talk.command('blacklist', only_to_me=False, permission=permission.SUPERUSER)
@@ -114,7 +135,7 @@ async def talk_search(session: CommandSession):
     try:
         assert len(session.args['argv']) in (1, 2)
     except AssertionError:
-        session.send('参数错误')
+        session.send('参数错了呢~')
 '''
 
 # 自然语言处理，用于执行自动回复
@@ -126,11 +147,14 @@ async def _(session: NLPSession):
     cursor.execute(get_blacklist_SQL)
     blacklist = cursor.fetchall()
     if session.ctx['user_id'] in blacklist:
+        logger.debug('用户在黑名单中，忽略')
         return
 
     cursor.execute('''SELECT * FROM rules''')
     rules = cursor.fetchall()
     message = session.msg_text
+    if not message:
+        return
     reply_list = []
 
     for rule in rules:
@@ -142,3 +166,5 @@ async def _(session: NLPSession):
 
     if reply_list:
         await session.send(choice(reply_list))
+    else:
+        logger.debug('没有匹配的规则，忽略')
