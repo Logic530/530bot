@@ -145,8 +145,14 @@ async def _(session: NLPSession):
     # 检查用户是否在黑名单
     get_blacklist_SQL = '''SELECT * from blacklist'''
     cursor.execute(get_blacklist_SQL)
-    blacklist = cursor.fetchall()
-    if session.ctx['user_id'] in blacklist:
+    blacklist = []
+    fetch_result = cursor.fetchall()
+
+    # 唉，这写的什么玩意
+    for record in fetch_result:
+        blacklist.append(record[0])
+
+    if int(session.ctx['user_id']) in blacklist:
         logger.debug('用户在黑名单中，忽略')
         return
 
